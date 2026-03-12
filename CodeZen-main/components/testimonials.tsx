@@ -19,10 +19,14 @@ type Testimonial = {
 };
 
 const DEFAULT_TESTIMONIALS: Testimonial[] = [
-  { id: -1, name: "Rahul Sharma", email: "rahul@example.com", message: "CodeZen helped me land my first job as a Python developer!" },
-  { id: -2, name: "Priya Patil", email: "priya@example.com", message: "The interactive compiler is a game changer for learning C++." },
-  { id: -3, name: "Amit Deshmukh", email: "amit@example.com", message: "Best platform for Marathi students to master programming." },
-  { id: -4, name: "Snehal Shinde", email: "snehal@example.com", message: "The AI Assistant solved all my debugging doubts in seconds!" },
+  { id: -1, name: "Rahul Sharma", email: "rahul@example.com", message: "CodeZen helped me land my first job as a Python developer! The Marathi explanations are perfect." },
+  { id: -2, name: "Priya Patil", email: "priya@example.com", message: "The interactive compiler is a game changer for learning C++. No need to install heavy software." },
+  { id: -3, name: "Amit Deshmukh", email: "amit@example.com", message: "Best platform for Marathi students to master programming. Very affordable and high quality." },
+  { id: -4, name: "Snehal Shinde", email: "snehal@example.com", message: "The AI Assistant solved all my debugging doubts in seconds! It felt like a personal mentor." },
+  { id: -5, name: "Vikram Lale", email: "vikram@example.com", message: "I learned JavaScript from scratch here. The course structure is very logical and easy to follow." },
+  { id: -6, name: "Anjali More", email: "anjali@example.com", message: "The certificate I received helped me showcase my skills on LinkedIn. Highly recommended!" },
+  { id: -7, name: "Sameer Kulkarni", email: "sameer@example.com", message: "Great UI! The dark mode is soothing for long coding sessions. The content is top-notch." },
+  { id: -8, name: "Nandini Chavan", email: "nandini@example.com", message: "Finally found a place where I can learn coding in my own language. Simplifies complex logic." },
 ];
 
 export default function TestimonialPage() {
@@ -36,8 +40,9 @@ export default function TestimonialPage() {
   const fetchTestimonials = async () => {
     setLoading(true);
     try {
-      const testi = await getTestimonials();
-      setTestimonials(testi.length > 0 ? testi : DEFAULT_TESTIMONIALS);
+      const dbTestimonials = await getTestimonials();
+      // Combine database testimonials with our high-quality defaults
+      setTestimonials([...dbTestimonials, ...DEFAULT_TESTIMONIALS]);
     } catch (error) {
       console.error("Fetch Error:", error);
       setTestimonials(DEFAULT_TESTIMONIALS);
