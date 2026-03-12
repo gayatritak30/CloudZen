@@ -8,21 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { Marquee } from "./ui/marquee";
-import { getTestimonials } from "@/lib/actions";
-type Testimonial = {
-  id: number;
-  name: string;
-  email: string;
-  //   image: string
-  message: string;
-};
-import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
-import { Marquee } from "./ui/marquee";
 import { getTestimonials, createTestimonial } from "@/lib/actions";
 import { toast } from "sonner";
 
@@ -50,10 +35,15 @@ export default function TestimonialPage() {
 
   const fetchTestimonials = async () => {
     setLoading(true);
-    const testi = await getTestimonials();
-    // Use defaults if none found in DB
-    setTestimonials(testi.length > 0 ? testi : DEFAULT_TESTIMONIALS);
-    setLoading(false);
+    try {
+      const testi = await getTestimonials();
+      setTestimonials(testi.length > 0 ? testi : DEFAULT_TESTIMONIALS);
+    } catch (error) {
+      console.error("Fetch Error:", error);
+      setTestimonials(DEFAULT_TESTIMONIALS);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -101,7 +91,7 @@ export default function TestimonialPage() {
                     <div className="space-y-3">
                       <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
-                          {testimonial.name[0]}
+                          {testimonial.name[0] || "?"}
                         </div>
                         <p className="font-semibold text-foreground">
                           {testimonial.name}
