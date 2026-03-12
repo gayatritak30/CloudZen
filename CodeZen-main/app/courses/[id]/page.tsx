@@ -31,7 +31,7 @@ export default function CourseLearnPage() {
           if (result.success) {
             toast.success("Payment successful! Course added to your profile across all devices.")
           } else {
-            toast.error("Handled payment but failed to sync enrollment. Please contact support.")
+            toast.error(result.error || "Handled payment but failed to sync enrollment. Please contact support.")
           }
         } catch (error: any) {
           console.error("Enrollment error:", error)
