@@ -1,7 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-
 const SYSTEM_INSTRUCTION = `
 You are CodeZen, a programming assistant.
 
@@ -21,12 +19,13 @@ export async function POST(req: Request) {
 
     if (!process.env.GEMINI_API_KEY) {
       return Response.json(
-        { message: "AI Assistant is not configured. Please add GEMINI_API_KEY to your env variables." },
+        { message: "GEMINI_API_KEY is missing in your Vercel settings. Please add it and redeploy." },
         { status: 500 }
       );
     }
 
-    const model = genAI.getGenerativeModel({ 
+    const aiClient = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const model = aiClient.getGenerativeModel({ 
       model: "gemini-1.5-flash",
       systemInstruction: SYSTEM_INSTRUCTION
     });
@@ -35,11 +34,15 @@ export async function POST(req: Request) {
     const response = await result.response;
     const text = response.text();
 
+    if (!text) throw new Error("AI returned an empty response.");
+
     return Response.json({ message: text });
   } catch (error: any) {
     console.error("Chat API Error:", error);
+    
+    const errorMsg = error.message || "Unknown AI connection error";
     return Response.json(
-      { message: "Sorry, I'm having trouble connecting to the AI. Please try again later." },
+      { message: `AI Error: ${errorMsg}` },
       { status: 500 }
     );
   }
