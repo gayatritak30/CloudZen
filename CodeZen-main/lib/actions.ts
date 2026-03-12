@@ -1,21 +1,29 @@
 "use server";
-import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 
-const adapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL,
-});
-const prisma = new PrismaClient({
-  adapter,
-});
+// PrismaClient singleton to prevent too many connections in development
+const globalForPrisma = global as unknown { prisma: PrismaClient };
+
+export const prisma =
+  globalForPrisma.prisma ||
+  new PrismaClient({
+    log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
+  });
+
+if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
 export const getTestimonials = async () => {
-  const testimonials = await prisma.testimonial.findMany({
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
-  return testimonials;
+  try {
+    const testimonials = await prisma.testimonial.findMany({
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+    return testimonials;
+  } catch (error) {
+    console.error("Error fetching testimonials:", error);
+    return [];
+  }
 };
 
 export const createTestimonial = async (
@@ -23,26 +31,33 @@ export const createTestimonial = async (
   email: string,
   message: string
 ) => {
-  await prisma.testimonial.create({
-    data: {
-      name,
-      email,
-      message,
-    },
-  });
+  try {
+    await prisma.testimonial.create({
+      data: {
+        name,
+        email,
+        message,
+      },
+    });
+  } catch (error) {
+    console.error("Error creating testimonial:", error);
+    throw new Error("Failed to create testimonial.");
+  }
 };
+
 export const checkEnrollment = async (userId: string, courseId: string) => {
   try {
-    // Professional Fallback: Using raw SQL because Prisma CLI is having environment issues on this machine
-    const enrollments = await prisma.$queryRaw`
-      SELECT * FROM "Enrollment" 
-      WHERE "userId" = ${userId} AND "courseId" = ${courseId}
-      LIMIT 1
-    ` as any[];
+    const enrollment = await prisma.enrollment.findUnique({
+      where: {
+        userId_courseId: {
+          userId,
+          courseId,
+        },
+      },
+    });
 
-    if (!enrollments || enrollments.length === 0) return { isEnrolled: false };
+    if (!enrollment) return { isEnrolled: false };
 
-    const enrollment = enrollments[0];
     const isExpired = new Date() > new Date(enrollment.validUntil);
     
     if (isExpired) {
@@ -59,17 +74,27 @@ export const checkEnrollment = async (userId: string, courseId: string) => {
 export const enrollUser = async (userId: string, courseId: string, paymentId?: string) => {
   try {
     const validUntil = new Date();
-    validUntil.setFullYear(validUntil.getFullYear() + 1); // Professional 1 year validity
+    validUntil.setFullYear(validUntil.getFullYear() + 1);
 
-    const id = "enr_" + Math.random().toString(36).substr(2, 9);
-    
-    // UPSERT style using raw SQL for cross-device persistence
-    await prisma.$executeRaw`
-      INSERT INTO "Enrollment" ("id", "userId", "courseId", "validUntil", "paymentId")
-      VALUES (${id}, ${userId}, ${courseId}, ${validUntil}, ${paymentId || null})
-      ON CONFLICT ("userId", "courseId") 
-      DO UPDATE SET "validUntil" = ${validUntil}, "paymentId" = ${paymentId || null}
-    `;
+    // Using Standard Prisma Upsert for multi-device reliability
+    await prisma.enrollment.upsert({
+      where: {
+        userId_courseId: {
+          userId,
+          courseId,
+        },
+      },
+      update: {
+        validUntil,
+        paymentId: paymentId || null,
+      },
+      create: {
+        userId,
+        courseId,
+        validUntil,
+        paymentId: paymentId || null,
+      },
+    });
 
     return { success: true };
   } catch (error) {
