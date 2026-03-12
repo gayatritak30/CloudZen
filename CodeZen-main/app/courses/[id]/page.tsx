@@ -33,9 +33,9 @@ export default function CourseLearnPage() {
           } else {
             toast.error("Handled payment but failed to sync enrollment. Please contact support.")
           }
-        } catch (error) {
+        } catch (error: any) {
           console.error("Enrollment error:", error)
-          toast.error("Something went wrong during enrollment.")
+          toast.error(`Enrollment failed: ${error.message || "Unknown error"}`)
         } finally {
           setIsVerifying(false)
           // Always clean URL

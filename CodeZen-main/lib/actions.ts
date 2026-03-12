@@ -4,13 +4,14 @@ import { PrismaClient } from "@prisma/client";
 // PrismaClient singleton to prevent too many connections in development
 const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
-export const prisma =
-  globalForPrisma.prisma ||
-  new PrismaClient({
-    log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
-  });
+const getPrisma = () => {
+  if (globalForPrisma.prisma) return globalForPrisma.prisma;
+  const p = new PrismaClient();
+  if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = p;
+  return p;
+};
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+export const prisma = getPrisma();
 
 export const getTestimonials = async () => {
   try {
