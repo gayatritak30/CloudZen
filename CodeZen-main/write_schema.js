@@ -1,0 +1,34 @@
+const fs = require('fs');
+const content = `generator client {
+  provider = "prisma-client-js"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = "postgres://22370e60978fcfca0e14d85a58c2d5a883f5b17084815839b11d1a8920a89f11:sk_I8h78UyDEiGhZFvm-Xux7@db.prisma.io:5432/postgres?sslmode=require"
+}
+
+model Testimonial {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String
+  message   String
+  createdAt DateTime @default(now())
+}
+
+model Enrollment {
+  id        String   @id @default(cuid())
+  userId    String
+  courseId  String
+  createdAt DateTime @default(now())
+  validUntil DateTime
+  paymentId String?
+
+  @@unique([userId, courseId])
+  @@index([userId])
+}
+`;
+
+fs.writeFileSync('prisma/schema.prisma', content, { encoding: 'utf8' });
+console.log('File written successfully');
