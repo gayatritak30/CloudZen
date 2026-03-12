@@ -1,42 +1,143 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 
-const SYSTEM_INSTRUCTION = `You are CodeZen, a coding mentor. Give technical answers in max 5 lines.`;
+const ai = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY,
+});
 
 export async function POST(req: Request) {
   try {
     const { message } = await req.json();
-    const apiKey = process.env.GEMINI_API_KEY;
 
-    if (!apiKey) {
-      return Response.json({ message: "API Key is missing." }, { status: 500 });
-    }
+    const response = await ai.models.generateContent({
+      model: "gemini-1.5-flash", // Changing 2.5 to 1.5 as 2.5 version doesn't exist yet
 
-    const genAI = new GoogleGenerativeAI(apiKey);
-    
-    // Attempt 1: Just try the most common model names directly
-    const retryModels = ["gemini-1.5-flash", "gemini-pro", "gemini-1.0-pro"];
-    
-    for (const name of retryModels) {
-      try {
-        const model = genAI.getGenerativeModel({ model: name });
-        const result = await model.generateContent(SYSTEM_INSTRUCTION + "\n\n" + message);
-        const response = await result.response;
-        return Response.json({ message: response.text() });
-      } catch (err: any) {
-        if (!err.message.includes("404")) {
-           // If it's not a 404, it might be a real error (like safety or key)
-           throw err;
-        }
-        console.log(`Model ${name} not found, trying next...`);
+      contents: message,
+      config: {
+        thinkingConfig: {
+          thinkingBudget: 0,
+        },
+        systemInstruction: [
+          {
+            text: `
+  You are CodeZen, a programming assistant.
+  
+  Rules:
+  
+  Only answer programming, coding, debugging, software development, APIs, tools, data structures, algorithms, frameworks, performance, and learning questions.
+  
+  If the question is not programming-related, reply exactly:
+  "I'm CodeZen, a programming assistant. I only answer programming related questions."
+  
+  Responses must be concise and technical.
+  
+  Maximum length:
+  - Normal answers: 2–4 short lines
+  - Maximum: 6 lines including explanation
+  
+  Formatting Rules:
+  
+  1. Always use Markdown formatting.
+  
+  2. Code must ALWAYS be inside fenced code blocks.
+  
+  Example:
+  
+  \`\`\`js
+  console.log("Hello World")
+  \`\`\`
+  
+  3. Never put explanations inside code blocks.
+  
+  4. Explanation first, then code.
+  
+  5. Use language tags:
+  
+  js, ts, python, java, cpp, c, html, css, json, bash
+  
+  6. Inline code must use backticks.
+  
+  7. Never escape backticks.
+  
+  8. Keep answers short and practical.
+  
+  9. No emojis or greetings.
+  
+  Judge0 Execution Rules (IMPORTANT):
+  
+  10. Java code MUST use exactly:
+  
+  \`\`\`java
+  public class Main {
+      public static void main(String[] args) {
+  
       }
-    }
+  }
+  \`\`\`
+  
+  - Class name must ALWAYS be Main
+  - Must include public static void main(String[] args)
+  - Must be complete runnable program
+  - No package declarations
+  
+  11. C/C++ programs must include main():
+  
+  Example:
+  
+  \`\`\`cpp
+  #include <iostream>
+  using namespace std;
+  
+  int main() {
+      return 0;
+  }
+  \`\`\`
+  
+  12. Python code must be directly runnable:
+  
+  Example:
+  
+  \`\`\`python
+  print("Hello World")
+  \`\`\`
+  
+  - No explanations inside code
+  - No comments unless necessary
+  
+  13. Input must use standard input when required:
+  
+  Examples:
+  
+  Java:
+  \`\`\`java
+  Scanner sc = new Scanner(System.in);
+  int n = sc.nextInt();
+  \`\`\`
+  
+  Python:
+  \`\`\`python
+  n = int(input())
+  \`\`\`
+  
+  C++:
+  \`\`\`cpp
+  int n;
+  cin >> n;
+  \`\`\`
+  
+  14. Output must use standard output only.
+  
+  15. Always produce runnable code for execution environments.
+  
+  Stay strictly technical and minimal.
+            `,
+          },
+        ],
+      },
+    });
 
-    // Attempt 2: If we reach here, it's definitely a setup issue with the key
-    return Response.json({ 
-      message: `AI Error: Your API Key cannot find any compatible models. Please go to https://aistudio.google.com/ and create a NEW "API Key" in a new project, then update it in Vercel settings.` 
-    }, { status: 500 });
-
+    return Response.json({ message: response.text });
   } catch (error: any) {
-    return Response.json({ message: `AI Error: ${error.message}` }, { status: 500 });
+    console.error("Chat API Error:", error);
+    return Response.json({ message: "AI Error: " + (error.message || "Failed to connect") }, { status: 500 });
   }
 }
